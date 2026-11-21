@@ -27,7 +27,7 @@
       <section class="panel">
         <div class="panel-heading">
           <span class="step">1</span>
-          <div><h2>画像を選んで補正</h2><p>チェキの外側の四隅を指定します。</p></div>
+          <div><h2>画像を選んで補正</h2><p>自動検出した四隅を確認・調整します。</p></div>
         </div>
         <div class="source-actions">
           <label class="button primary">
@@ -47,6 +47,7 @@
           <span>撮影した写真や、端末にある画像を使えます。</span>
         </div>
         <div id="editor" hidden>
+          <p id="detection-status" class="detection-status" role="status"></p>
           <div class="frame" id="frame">
             <img id="source" alt="補正する元画像" draggable="false">
             <svg class="outline" id="outline" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polygon id="quad"/></svg>
@@ -63,7 +64,7 @@
               <option value="square">SQUARE</option>
               <option value="wide">WIDE（横）</option><option value="wide-portrait">WIDE（縦）</option>
             </select>
-            <button id="reset" type="button" class="text-button">四隅をリセット</button>
+            <button id="reset" type="button" class="text-button">手動でやり直す</button>
           </div>
           <button class="button primary full" id="correct" type="button">補正してプレビュー</button>
         </div>

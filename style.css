@@ -72,6 +72,8 @@ h1 { font-size: clamp(29px, 4vw, 44px); letter-spacing: -.045em; line-height: 1.
 .handle::before { content: ""; display: block; width: 18px; height: 18px; margin: auto; border: 2px solid white; border-radius: 50%; background: #9b61ed; box-shadow: 0 0 0 1px #3c1863; }
 .handle:active { cursor: grabbing; }
 .hint { color: var(--muted); font-size: 12px; line-height: 1.7; }
+.detection-status { border-left: 2px solid #8c6bb8; padding: 4px 10px; color: #dcc8fa; font-size: 13px; line-height: 1.6; }
+.detection-status[data-state="missed"] { border-color: #b68a50; color: #f4d6af; }
 .editor-actions { margin: 16px 0; display: flex; flex-wrap: wrap; gap: 9px; align-items: center; font-size: 13px; }
 select, .text-button { font: inherit; color: inherit; min-height: 40px; }
 select { background: #282034; border: 1px solid #49375d; border-radius: 8px; padding: 0 7px; }

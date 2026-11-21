@@ -1,4 +1,5 @@
 import { isConvex, rectify } from './rectify.js';
+import { ANALYSIS_SIDE } from './detect.js';
 
 const byId = id => document.getElementById(id);
 const source = byId('source');
@@ -8,6 +9,7 @@ const correct = byId('correct');
 const format = byId('format');
 const error = byId('error');
 const status = byId('status');
+const detectionStatus = byId('detection-status');
 const result = byId('result');
 const download = byId('download');
 const dimensions = byId('dimensions');
@@ -17,6 +19,7 @@ let sourceURL;
 let resultURL;
 let loadVersion = 0;
 let pendingCorrection;
+let detectionWorker;
 
 function showError(message = '') {
   error.textContent = message;
@@ -26,7 +29,7 @@ function showError(message = '') {
 function clearResult() {
   pendingCorrection?.abort();
   pendingCorrection = undefined;
-  correct.disabled = false;
+  correct.disabled = Boolean(detectionWorker);
   correct.textContent = '補正してプレビュー';
   if (resultURL) URL.revokeObjectURL(resultURL);
   resultURL = undefined;
@@ -48,10 +51,68 @@ function showPoints() {
 }
 
 function resetPoints() {
+  stopDetection('manual');
   points = [[0.06, 0.06], [0.94, 0.06], [0.94, 0.94], [0.06, 0.94]];
   clearResult();
   showError();
   showPoints();
+}
+
+function showDetection(state) {
+  detectionStatus.dataset.state = state;
+  detectionStatus.textContent = {
+    running: 'チェキの外側の四隅を検出しています…',
+    found: '四隅を自動検出しました。白いフチの外側に合っているか確認してください。',
+    missed: '四隅を自動検出できませんでした。丸を動かして、手動で合わせてください。',
+    manual: '手動調整中。四隅を白いフチの外側に合わせてください。',
+  }[state];
+}
+
+function stopDetection(state) {
+  if (detectionWorker) {
+    detectionWorker.terminate();
+    detectionWorker = undefined;
+    correct.disabled = false;
+  }
+  showDetection(state);
+}
+
+function startDetection(image) {
+  const canvas = document.createElement('canvas');
+  try {
+    const scale = Math.min(1, ANALYSIS_SIDE / Math.max(image.naturalWidth, image.naturalHeight));
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    context.fillStyle = '#fff';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.imageSmoothingQuality = 'high';
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+    const worker = detectionWorker = new Worker(new URL('./detection-worker.js', import.meta.url), { type: 'module' });
+    correct.disabled = true;
+    showDetection('running');
+    worker.addEventListener('message', ({ data: detected }) => {
+      if (worker !== detectionWorker) return;
+      if (detected && isConvex(detected)) {
+        points = detected;
+        showPoints();
+        stopDetection('found');
+      } else {
+        stopDetection('missed');
+      }
+    });
+    const fallback = () => {
+      if (worker === detectionWorker) stopDetection('missed');
+    };
+    worker.addEventListener('error', fallback);
+    worker.addEventListener('messageerror', fallback);
+    worker.postMessage(imageData, [imageData.data.buffer]);
+  } catch {
+    stopDetection('missed');
+  } finally {
+    canvas.width = canvas.height = 0;
+  }
 }
 
 async function chooseFile(event) {
@@ -72,6 +133,7 @@ async function chooseFile(event) {
     byId('editor').hidden = false;
     byId('source-empty').hidden = true;
     resetPoints();
+    startDetection(candidate);
   } catch {
     if (version === loadVersion) showError('画像を開けませんでした。端末のカメラ設定でJPEGを選ぶか、別の画像をお試しください。');
   } finally {
@@ -83,6 +145,7 @@ const clamp = value => Math.max(0, Math.min(1, value));
 function movePoint(i, x, y) {
   const next = points.map((point, index) => index === i ? [clamp(x), clamp(y)] : point);
   if (!isConvex(next) || (next[i][0] === points[i][0] && next[i][1] === points[i][1])) return;
+  stopDetection('manual');
   points = next;
   clearResult();
   showError();
@@ -95,6 +158,7 @@ handles.forEach((handle, i) => {
   let offsetY;
   handle.addEventListener('pointerdown', event => {
     if (!event.isPrimary || event.button !== 0) return;
+    if (detectionWorker) stopDetection('manual');
     const bounds = frame.getBoundingClientRect();
     offsetX = (event.clientX - bounds.left) / bounds.width - points[i][0];
     offsetY = (event.clientY - bounds.top) / bounds.height - points[i][1];

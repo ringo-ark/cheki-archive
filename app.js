@@ -52,7 +52,7 @@ function showPoints() {
 
 function resetPoints() {
   stopDetection('manual');
-  points = [[0.06, 0.06], [0.94, 0.06], [0.94, 0.94], [0.06, 0.94]];
+  points = [[0, 0], [1, 0], [1, 1], [0, 1]];
   clearResult();
   showError();
   showPoints();
@@ -62,9 +62,9 @@ function showDetection(state) {
   detectionStatus.dataset.state = state;
   detectionStatus.textContent = {
     running: 'チェキの外側の四隅を検出しています…',
-    found: '四隅を自動検出しました。白いフチの外側に合っているか確認してください。',
-    missed: '四隅を自動検出できませんでした。丸を動かして、手動で合わせてください。',
-    manual: '手動調整中。四隅を白いフチの外側に合わせてください。',
+    found: '四隅を自動検出しました。チェキの外側の角に合っているか確認してください。',
+    missed: 'チェキの外周を特定できませんでした。画像の四隅にある丸を動かして、手動で合わせてください。',
+    manual: '手動調整中。丸をチェキの外側の四隅に合わせてください。',
   }[state];
 }
 
